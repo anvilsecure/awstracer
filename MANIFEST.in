@@ -1,6 +1,7 @@
 include pyproject.toml
 include LICENSE
 include README.md
+include TODO
 recursive-include images *
 recursive-include src *.py
 exclude awstrace-play
