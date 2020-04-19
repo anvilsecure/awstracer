@@ -1,0 +1,7 @@
+include pyproject.toml
+include LICENSE
+include README.md
+recursive-include images *
+recursive-include src *.py
+exclude awstrace-play
+exclude awstrace-rec

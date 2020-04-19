@@ -1,0 +1,10 @@
+*.pyc
+/dist/
+/*.egg-info
+src/*.egg-info
+/*.egg
+__pycache__
+*.swp
+.eggs/
+.tox/
+build/

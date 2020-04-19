@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+
+if __name__ == "__main__":
+    import sys
+    vf = sys.version_info
+    if vf[0] < 3 or vf[0] == 3 and vf[1] < 6:
+        fatal("Python >3.6 required\n")
+    sys.path.append("src")
+    from awstracer import player
+    player.main()
