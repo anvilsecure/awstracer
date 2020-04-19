@@ -1,6 +1,6 @@
 # AWS CLI Tracer
 
-![screenshot][/screenshots/screenshots.jpg?raw=true "adsf")
+![screenshot](/screenshots/test.jpg?raw=true "adsf")
 
 ## Example
 
