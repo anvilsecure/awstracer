@@ -82,3 +82,12 @@ $ aws dynamodb get-item --consistent-read --table-name bla-table --key '{ "Artis
 
 
 ## Usage
+
+## Installation
+
+Please note that this tool requires at least Python `>= 3.6`.  To install from pip just run `python3 -m pip install awstracer`. To install from source simply clone the repository and run:
+
+```
+$ python setup.py sdist
+$ pip install dist/awstracer-1.0.tar.gz
+```
