@@ -2,4 +2,4 @@
 - add more debug logging to player
 - publish to pip
 - add minimum versions for botocore etc
-- add version number info
+- add example creating users + policies

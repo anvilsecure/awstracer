@@ -1,11 +1,24 @@
 import setuptools
+import re
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+name = "awstracer"
+
+vfile = "src/{}/_version.py".format(name)
+with open(vfile, "rt") as fd:
+    verstrline = fd.read()
+    regex = r"^__version__ = ['\"]([^'\"]*)['\"]"
+    mo = re.search(regex, verstrline, re.M)
+    if mo:
+        version = mo.group(1)
+    else:
+        raise RuntimeError("Unable to find version string in %s." % (vfile,))
+
+with open("README.md", "r") as fd:
+    long_description = fd.read()
 
 setuptools.setup(
-    name="awstracer",
-    version="1.0",
+    name=name,
+    version=version,
     author="Anvil Ventures",
     author_email="info@anvilventures.com",
     description="TODO",
@@ -14,7 +27,7 @@ setuptools.setup(
     url="https://github.com/anvilventures/awstracer",
     packages=setuptools.find_packages(where="src"),
     package_dir={"": "src"},
-    keywords="AWS awscli recorder player tracer",
+    keywords="AWS cli trace recorder and player",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
