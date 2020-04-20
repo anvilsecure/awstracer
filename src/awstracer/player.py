@@ -224,32 +224,35 @@ class TracePlayer(TraceRunner):
         self.connections = list(pruned.values())
 
 
-def main():
-
+def opt_parser(args=None):
     parser = argparse.ArgumentParser(description="AWS CLI Trace Player")
     parser.add_argument("--dryrun", action="store_true", dest="dryrun", help="Show trace and computed parameter substituations without actually executing them")
-    parser.add_argument("--endpoint", metavar="URL", type=str, help="AWS endpoint url to use")
-    parser.add_argument("--param", nargs=2, metavar=("NAME", "VALUE"), type=str, help="Override parameter NAME with VALUE", action="append")
-    parser.add_argument("--profile", metavar="PROFILE", type=str, help="AWS profile to run trace under")
-    parser.add_argument("--region", metavar="REGION", type=str, help="AWS region to run trace in")
+    parser.add_argument("--endpoint", metavar="URL", type=str, help="AWS endpoint url to use", dest="endpoint")
+    parser.add_argument("--param", nargs=2, metavar=("NAME", "VALUE"), type=str, help="Override parameter NAME with VALUE", action="append", dest="params")
+    parser.add_argument("--profile", metavar="PROFILE", type=str, help="AWS profile to run trace under", dest="profile")
+    parser.add_argument("--region", metavar="REGION", type=str, help="AWS region to run trace in", dest="region")
     parser.add_argument("-s", type=int, metavar="N", dest="sleep_delay", default=None, help="Force N seconds of sleep delay between commands")
     parser.add_argument("-c", action="store_false", dest="colorize", help="Turn off colorized output")
     parser.add_argument("-d", action="store_true", dest="debug", help="Turn on debug output")
     parser.add_argument("-f", action="store_false", dest="stop_on_error", help="Continue running even if one or more commands fail")
     group = parser.add_argument_group("required arguments")
-    group.add_argument("--trace-file", metavar="FILE", type=str, required=True, help="output trace file")
-    ns = parser.parse_args()
-
-    setup_logging(logger, debug=ns.debug, colorize=ns.colorize)
-
+    group.add_argument("--trace-file", metavar="FILE", type=str, required=True, help="output trace file", dest="trace_file")
+    ns = parser.parse_args() if not args else parser.parse_args(args)
     if ns.sleep_delay and ns.sleep_delay < 0:
-        logger.error("sleep delay cannot be negative")
+        sys.stderr.write("sleep delay cannot be negative\n")
+        sys.stderr.flush()
         sys.exit(1)
+    return ns
+
+
+def main():
+    ns = opt_parser()
+    setup_logging(logger, debug=ns.debug, colorize=ns.colorize)
 
     # add the overridden parameters to the input trace
     input_args = {}
-    if ns.param:
-        for name, val in ns.param:
+    if ns.params:
+        for name, val in ns.params:
             cname = convert_to_camelcase(name)
             input_args[cname] = val
             logger.debug("Adding {} to input for {} with value {}".format(name, cname, val))

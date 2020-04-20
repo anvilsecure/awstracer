@@ -1,3 +1,5 @@
 - add unittests for player
 - add more debug logging to player
 - publish to pip
+- add minimum versions for botocore etc
+- add version number info

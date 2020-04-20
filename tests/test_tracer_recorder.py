@@ -18,6 +18,7 @@ class TestRecorder(unittest.TestCase):
         for opt in opts:
             self.assertIn(opt, ns)
         self.assertEqual(ns.trace_file, "bla")
+        # check default settings for options
         self.assertTrue(ns.prompt_color)
         self.assertTrue(ns.prompt_on_save)
         self.assertTrue(ns.prompt_on_misc)
