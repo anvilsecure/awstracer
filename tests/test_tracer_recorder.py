@@ -33,9 +33,13 @@ class TestRecorder(unittest.TestCase):
         try:
             from awstracer.recorder import TraceRecorder
             from awstracer.tracer import TraceRunner
+            import uuid
         except Exception:
             self.fail("cannot import TraceRecorder")
-        tr = TraceRecorder()
+        with self.assertRaises(TypeError):
+            tr = TraceRecorder()
+        # give random filename
+        tr = TraceRecorder(uuid.uuid4().hex)
         # prompt on save should be on by default
         self.assertIsInstance(tr, TraceRunner)
         self.assertTrue(tr.prompt_on_save)

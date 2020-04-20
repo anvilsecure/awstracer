@@ -8,8 +8,10 @@ from .utils import json_dumps
 
 
 class TraceRecorder(TraceRunner):
-    def __init__(self, filename=None, prompt_on_save=True):
+    def __init__(self, filename, prompt_on_save=True):
         super().__init__()
+        if filename is None:
+            raise ValueError("need a filename to save to")
         self._filename = filename
         self.traces = []
         self.prompt_on_save = prompt_on_save
