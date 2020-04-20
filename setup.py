@@ -45,8 +45,8 @@ setuptools.setup(
                             "awstrace-rec=awstracer.recorder:main"]
     },
     install_requires=[
-        "awscli",
-        "botocore"
+        "awscli>=1.18.39",
+        "botocore>=1.15.39"
     ],
     extras_require={
         "test": ["tox", "flake8"]

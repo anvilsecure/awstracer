@@ -1,5 +1,6 @@
 - add unittests for player
 - add more debug logging to player
 - publish to pip
-- add minimum versions for botocore etc
 - add example creating users + policies
+- add requirements.txt
+  https://packaging.python.org/discussions/install-requires-vs-requirements/
