@@ -3,6 +3,9 @@ import re
 
 name = "awstracer"
 
+# We could use import obviously but we parse it as some python build systems
+# otherwise pollute namespaces and we might end up with some annoying issues.
+# See https://stackoverflow.com/a/7071358 for a discussion.
 vfile = "src/{}/_version.py".format(name)
 with open(vfile, "rt") as fd:
     verstrline = fd.read()
@@ -13,6 +16,7 @@ with open(vfile, "rt") as fd:
     else:
         raise RuntimeError("Unable to find version string in %s." % (vfile,))
 
+# load long description directly from the include markdown README
 with open("README.md", "r") as fd:
     long_description = fd.read()
 
