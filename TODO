@@ -1,5 +1,4 @@
 - add more unittests for player regarding pruning/finding connections etc
-- add more debug logging to player
 - add example creating users + policies
   https://packaging.python.org/discussions/install-requires-vs-requirements/
 - update metadata etc properly in setup.py to prep for pip publication

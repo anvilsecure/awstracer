@@ -44,9 +44,9 @@ class MatchingValueEdge(Edge):
 
 
 class TracePlayer(TraceRunner):
-    def __init__(self, _fd, profile=None, endpoint=None, region=None, prompt_color=True):
+    def __init__(self, input_fd, profile=None, endpoint=None, region=None, prompt_color=True):
         super().__init__()
-        self._fd = _fd
+        self._fd = input_fd
         self.connections = []
         self.profile = None
         self.endpoint = None
@@ -66,9 +66,12 @@ class TracePlayer(TraceRunner):
         print(prompt.format(data))
 
     def play_trace(self, input_trace, dryrun=False, stop_on_error=True, sleep_delay=None):
+        logger.debug("Playing trace: dryrun={}, stop_on_error={}, sleep_delay={}".format(dryrun, stop_on_error, sleep_delay))
+
         self._play_results = {}
         self._play_results[input_trace.request_id] = input_trace
 
+        logger.debug("Running {} single traces".format(len(self.traces)))
         for i, trace in enumerate(self.traces):
 
             # this is where we figure out the time difference between two
@@ -101,9 +104,11 @@ class TracePlayer(TraceRunner):
         # find connections into this trace and replace the variables with
         # the cached results variables
         replace_vars = {}
+        logger.debug("Playing single trace: fn_name={}, request_id={}, dryrun={}".format(trace.fn_name, trace.request_id, dryrun))
         missing, replaced = 0, 0
         for edge in self.connections:
             if edge.trace_to.request_id == trace.request_id:
+                logger.debug("Found matching edge to this trace from: fn_name={}, request_id={}".format(edge.trace_from.fn_name, edge.trace_from.request_id))
 
                 from_rid = edge.trace_from.request_id
                 if from_rid not in self._play_results:
@@ -121,7 +126,7 @@ class TracePlayer(TraceRunner):
                     continue
 
                 val = rtrace.outparams[name]
-                logger.debug("Replacing {} value with {} (was: {})".format(name, shlex.quote(val), shlex.quote(rtrace.outparams[name])))
+                logger.debug("Replacing {} value with {} (was: {})".format(name, shlex.quote(val), shlex.quote(edge.trace_to.inparams[name])))
                 replace_vars[name] = val
                 replaced += 1
 
@@ -134,12 +139,15 @@ class TracePlayer(TraceRunner):
         if self.profile:
             override.append("--profile")
             override.append(shlex.quote(self.profile))
+            logger.debug("Added --profile")
         if self.endpoint:
             override.append("--endpoint")
             override.append(shlex.quote(self.endpoint))
+            logger.debug("Added --endpoint")
         if self.region:
             override.append("--region")
             override.append(shlex.quote(self.region))
+            logger.debug("Added --region")
         poc = "{} {}".format(base_poc, " ".join(override))
 
         # highlight replaced variables in different color if requested
@@ -163,6 +171,7 @@ class TracePlayer(TraceRunner):
 
         out_trace = self.run_aws_cmd(args)
         self._play_results[trace.request_id] = out_trace
+        logger.debug("Ran trace and added results to the results cache")
         return out_trace
 
     def get_shell_poc(self):
@@ -175,13 +184,19 @@ class TracePlayer(TraceRunner):
     def find_trace_connections(self, trace_from, trace_to, name, val):
         if name in trace_from.outparams:
             if trace_from.outparams[name] == val:
+                logger.debug("Found connection from {} [] to {} [] with matching parameter name {} and value {}".
+                             format(trace_from.fn_name, trace_from.request_id, trace_to.fn_name, trace_to.request_id, name, val))
                 c = MatchingNameAndValueEdge(trace_from, trace_to, name)
             else:
+                logger.debug("Found connection from {} [] to {} [] with matching name {} but different values: {} vs {}".
+                             format(trace_from.fn_name, trace_from.request_id, trace_to.fn_name, trace_to.request_id, name, val, trace_from.outparams[name]))
                 c = MatchingNameEdge(trace_from, trace_to, name, trace_from.outparams[name], val)
             self.connections.append(c)
         else:
             for name2 in trace_from.outparams:
                 if trace_from.outparams[name2] == val:
+                    logger.debug("Found connection from {} [] to {} [] with matching value {} but different parameter names: {} vs {}".
+                                 format(trace_from.fn_name, trace_from.request_id, trace_to.fn_name, trace_to.request_id, val, name, name2))
                     c = MatchingValueEdge(trace_to, trace_to, name2, name)
                     self.connections.append(c)
 
@@ -210,13 +225,18 @@ class TracePlayer(TraceRunner):
         # connection in the tracefile that already supplies this value and as
         # such we can ignore the new one.
         pruned = {}
+        before_cnt = len(self.connections)
+        prune_cnt = 0
         for i, edge in enumerate(self.connections):
             keyname = "{}.{}".format(edge.trace_to.request_id, edge.varname_to)
             if keyname in pruned:
+                prune_cnt += 1
                 continue
             pruned[keyname] = edge
 
         self.connections = list(pruned.values())
+        after_cnt = len(self.connections)
+        logger.debug("Pruned {} connections from total of {} so now {} left".format(prune_cnt, before_cnt, after_cnt))
 
 
 def opt_parser(args=None):
