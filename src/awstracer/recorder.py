@@ -121,3 +121,7 @@ def main():
             prompt_color=ns.prompt_color,
             prompt_on_misc=ns.prompt_on_misc,
             enable_misc_cmd=ns.enable_misc_cmd)
+
+
+if __name__ == "__main__":
+    main()
