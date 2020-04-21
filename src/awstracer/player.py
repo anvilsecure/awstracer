@@ -44,9 +44,9 @@ class MatchingValueEdge(Edge):
 
 
 class TracePlayer(TraceRunner):
-    def __init__(self, filename, profile=None, endpoint=None, region=None, prompt_color=True):
+    def __init__(self, _fd, profile=None, endpoint=None, region=None, prompt_color=True):
         super().__init__()
-        self._filename = filename
+        self._fd = _fd
         self.connections = []
         self.profile = None
         self.endpoint = None
@@ -54,12 +54,7 @@ class TracePlayer(TraceRunner):
         self.prompt_color = prompt_color
 
     def __enter__(self):
-        try:
-            with open(self._filename, "rb") as fd:
-                self.traces = [Trace.from_dict(t) for t in json_load(fd)]
-        except Exception:
-            raise ValueError("Error while reading trace file")
-
+        self.traces = [Trace.from_dict(t) for t in json_load(self._fd)]
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -256,17 +251,21 @@ def main():
             cname = convert_to_camelcase(name)
             input_args[cname] = val
             logger.debug("Adding {} to input for {} with value {}".format(name, cname, val))
-
     input_trace = Trace()
     input_trace.set_output("special-start-input-trace", "<not set>", input_args)
 
-    with TracePlayer(
-            ns.trace_file,
-            prompt_color=ns.colorize,
-            profile=ns.profile,
-            endpoint=ns.endpoint,
-            region=ns.region) as player:
-        player.find_connections(input_trace)
-        player.prune_connections()
+    try:
+        with open(ns.trace_file, "rb") as fd:
+            with TracePlayer(
+                    input_fd=fd,
+                    prompt_color=ns.colorize,
+                    profile=ns.profile,
+                    endpoint=ns.endpoint,
+                    region=ns.region) as player:
+                player.find_connections(input_trace)
+                player.prune_connections()
 
-        player.play_trace(input_trace, dryrun=ns.dryrun, stop_on_error=ns.stop_on_error, sleep_delay=ns.sleep_delay)
+                player.play_trace(input_trace, dryrun=ns.dryrun, stop_on_error=ns.stop_on_error, sleep_delay=ns.sleep_delay)
+    except OSError:
+        logger.error("Failed to open {}".format(ns.trace_file))
+        sys.exit(1)
