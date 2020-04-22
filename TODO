@@ -1,4 +1,3 @@
-- add more unittests for player regarding pruning/finding connections etc
 - add example creating users + policies
 - add support for param loading via file://
 - update README.md

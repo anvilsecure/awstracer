@@ -120,3 +120,94 @@ class TestPlayer(unittest.TestCase):
                 tp.play_trace(st, dryrun=True, stop_on_error=True, sleep_delay=0)
         self.assertNotEqual(f.getvalue().find("(play) aws bla wut"), -1)
         self.assertNotEqual(f.getvalue().find("--arg1 'val'\"'\"'\"`ue1'"), -1)
+
+    def test_player_find_and_prune_connections(self):
+        try:
+            from awstracer.player import TracePlayer
+            from awstracer.tracer import Trace
+            from awstracer.utils import json_dumps
+            from awstracer.player import MatchingNameAndValueEdge, MatchingNameEdge, MatchingValueEdge
+        except Exception:
+            self.fail("cannot import TracePlayer")
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            st = Trace()
+            t = Trace()
+            t.start()
+            t.set_input("bla.wut", {"arg1": "val'\"`ue1"})
+            t.set_output("reqid2", "bla.wut", {"ret1": "val1"})
+            t.finish()
+            t2 = Trace()
+            t2.start()
+            t2.set_input("bla.wut2", {"ret1": "val1"})
+            t2.set_output("reqid2", "bla.wut2", {})
+            t2.finish()
+            t3 = Trace()
+            t3.start()
+            t3.set_input("bla.wut3", {"other-param-same-val": "val1"})
+            t3.set_output("reqid3", "bla.wut3", {"output-value": "val1"})
+            t3.finish()
+            t4 = Trace()
+            t4.start()
+            t4.set_input("bla.wut4", {"output-value": "val2"})
+            t4.set_output("reqid4", "bla.wut4", {})
+            t4.finish()
+            tt = [t, t2, t3, t4]
+            inp = io.StringIO()
+            inp.write("{}".format(json_dumps([x.to_dict() for x in tt])))
+            inp.seek(0)
+            with TracePlayer(inp, prompt_color=False) as tp:
+                tp.find_connections(st)
+                self.assertEqual(len(tp.connections), 3)
+
+                # test the first connection matching name+value
+                c = tp.connections[0]
+                self.assertIsInstance(c, MatchingNameAndValueEdge)
+                self.assertEqual(c.trace_from.fn_name, "bla.wut")
+                self.assertEqual(c.trace_to.fn_name, "bla.wut2")
+                self.assertIn("ret1", c.trace_from.outparams)
+                self.assertEqual(c.trace_from.outparams["ret1"], "val1")
+                self.assertIn("ret1", c.trace_to.inparams)
+                self.assertEqual(c.trace_to.inparams["ret1"], "val1")
+
+                # test second connection which should be matching value only
+                c = tp.connections[1]
+                self.assertIsInstance(c, MatchingValueEdge)
+                self.assertEqual(c.trace_from.fn_name, "bla.wut")
+                self.assertEqual(c.trace_to.fn_name, "bla.wut3")
+                self.assertIn("other-param-same-val", c.trace_to.inparams)
+                self.assertEqual(c.trace_to.inparams["other-param-same-val"], "val1")
+                self.assertIn("ret1", c.trace_from.outparams)
+                self.assertEqual(c.trace_from.outparams["ret1"], "val1")
+
+                # test third connection which should be matching name only
+                c = tp.connections[2]
+                self.assertIsInstance(c, MatchingNameEdge)
+                self.assertEqual(c.trace_from.fn_name, "bla.wut3")
+                self.assertEqual(c.trace_to.fn_name, "bla.wut4")
+                self.assertIn("output-value", c.trace_from.outparams)
+                self.assertEqual(c.trace_from.outparams["output-value"], "val1")
+                self.assertIn("output-value", c.trace_to.inparams)
+                self.assertEqual(c.trace_to.inparams["output-value"], "val2")
+
+                # test pruning
+                tp.prune_connections()
+                self.assertEqual(len(tp.connections), 3)
+
+                # add another one that will be pruned
+                t5 = Trace()
+                t5.start()
+                t5.set_input("bla.wut5", {"ret1": "val1"})
+                t5.set_output("reqid5", "bla.wut5", {})
+                t5.finish()
+                tp.traces.append(t5)
+
+                tp.find_connections(st)
+                self.assertEqual(len(tp.connections), 5)
+                c = tp.connections[-1]
+                self.assertEqual(c.trace_from.fn_name, "bla.wut3")
+                tp.prune_connections()
+                self.assertEqual(len(tp.connections), 4)
+                c = tp.connections[-1]
+                self.assertEqual(c.trace_from.fn_name, "bla.wut")

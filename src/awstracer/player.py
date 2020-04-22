@@ -197,7 +197,7 @@ class TracePlayer(TraceRunner):
                 if trace_from.outparams[name2] == val:
                     logger.debug("Found connection from {} [] to {} [] with matching value {} but different parameter names: {} vs {}".
                                  format(trace_from.fn_name, trace_from.request_id, trace_to.fn_name, trace_to.request_id, val, name, name2))
-                    c = MatchingValueEdge(trace_to, trace_to, name2, name)
+                    c = MatchingValueEdge(trace_from, trace_to, name2, name)
                     self.connections.append(c)
 
     def find_connections(self, input_trace):
