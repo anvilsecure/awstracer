@@ -1,4 +1,3 @@
 - check for deeper nested structures when trying to find connections
 - update README.md
-- update metadata etc properly in setup.py to prep for pip publication
 - publish to pip
