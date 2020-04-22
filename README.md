@@ -1,10 +1,10 @@
 # AWS CLI Tracer
 
-![screenshot][/screenshots/screenshots.jpg?raw=true "adsf")
+![Example Terminal Session](/termsession_example.svg?raw=true&sanitize=true)
 
-## Example
+## Example: Creating a DynamoDB table and filling it with data
 
-Let's create a tracefile that creates a DynamoDB table named `Music` and inserts a song in the table. The commands are taken directly from the [Amazon DynamoDB Developer Guide](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-1.html). This looks something like this. Please note that the output is truncated.
+This is the example that can also be seen in the recorded terminal session above. Let's create a tracefile that creates a DynamoDB table named `Music` and inserts a song in the table. The commands are taken directly from the [Amazon DynamoDB Developer Guide](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-1.html). This looks something like this. Please note that the output is truncated.
 
 ```
 $ awstrace-rec --trace-file create_table.trace

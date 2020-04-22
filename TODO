@@ -1,6 +1,5 @@
 - add example creating users + policies
 - add support for param loading via file://
 - update README.md
-- create screenrecording sample and link to it in README.md (termtosvg to record the session?)
 - update metadata etc properly in setup.py to prep for pip publication
 - publish to pip
