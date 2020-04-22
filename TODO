@@ -1,5 +1,5 @@
 - add example creating users + policies
-- add support for param loading via file://
+- add support for param loading via file:// in player (recorder already has it)
 - update README.md
 - update metadata etc properly in setup.py to prep for pip publication
 - publish to pip

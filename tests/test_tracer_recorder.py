@@ -1,4 +1,8 @@
+import io
+import tempfile
 import unittest
+import uuid
+from contextlib import redirect_stderr, redirect_stdout
 
 
 class TestRecorder(unittest.TestCase):
@@ -7,8 +11,6 @@ class TestRecorder(unittest.TestCase):
             from awstracer.recorder import opt_parser
         except Exception:
             self.fail("cannot import opt_parser")
-        from contextlib import redirect_stderr, redirect_stdout
-        import io
         with self.assertRaises(SystemExit):
             with redirect_stdout(io.StringIO()):
                 with redirect_stderr(io.StringIO()):
@@ -33,7 +35,6 @@ class TestRecorder(unittest.TestCase):
         try:
             from awstracer.recorder import TraceRecorder
             from awstracer.tracer import TraceRunner
-            import uuid
         except Exception:
             self.fail("cannot import TraceRecorder")
         with self.assertRaises(TypeError):
@@ -44,3 +45,25 @@ class TestRecorder(unittest.TestCase):
         self.assertIsInstance(tr, TraceRunner)
         self.assertTrue(tr.prompt_on_save)
         self.assertIn("run_aws_cmd", dir(tr))
+
+    def test_recorder_file_arguments(self):
+        try:
+            from awstracer.recorder import TraceRecorder
+        except Exception:
+            self.fail("cannot import TraceRecorder")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            tr = TraceRecorder(uuid.uuid4().hex)
+            tmp_fn = "/tmp/{}".format(uuid.uuid4().hex)
+            tr.run_aws_cmd(["aws", "bla", "bla", "file://{}".format(tmp_fn)])
+            # check for error message which should contain the file we can't read
+            self.assertNotEqual(out.getvalue().find(tmp_fn), -1)
+
+        # test actual reading from file
+        tp = tempfile.NamedTemporaryFile()
+        tp.write(b"hello w0rld")
+        tp.seek(0)
+        tr = TraceRecorder(uuid.uuid4().hex)
+        args = tr.process_file_arguments(["aws", "bla", "bla", "file://{}".format(tp.name)])
+        self.assertEqual(len(args), 4)
+        self.assertEqual(args[3], "hello w0rld")

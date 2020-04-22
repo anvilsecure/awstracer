@@ -30,7 +30,26 @@ class TraceRecorder(TraceRunner):
             data = json_dumps(data, pretty=True)
             fd.write(data.encode("utf-8"))
 
+    def process_file_arguments(self, args):
+        ret = []
+        for arg in args:
+            if not arg.startswith("file://"):
+                ret.append(arg)
+                continue
+            arg_fn = arg[len("file://"):]
+            try:
+                with open(arg_fn, "rb") as fd:
+                    arg_data = fd.read().decode("utf-8")
+                    ret.append(arg_data)
+            except Exception:
+                print("Couldn't read {}".format(arg))
+                return None
+        return ret
+
     def run_aws_cmd(self, args):
+        args = self.process_file_arguments(args)
+        if not args:
+            return
         trace = super().run_aws_cmd(args)
         if not trace:
             return
