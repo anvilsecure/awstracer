@@ -2,11 +2,12 @@
 
 *"A poor man's Cloud Formation utility" --me*
 
-**awstracer** consists of two small utitilities which hook into the `aws` command-line interface internal event mechanism. Using it you can record a sequence of `aws` commands to a trace-file. The player will allow you to replay that sequence of commands under for example a different configured AWS profile or against a different AWS region. Think of it as a poor man's Cloud Formation. It's useful for when you have to re-run a set of commands or quickly test a bunch of things without having to switch back to the console the entire time. And it's also a whole lot quicker than having to write your own `awscli` and `botocore` logic.
+![Example Terminal Session](/termsession_example.svg?raw=true&sanitize=true)
+
+**awstracer** consists of two small utitilities which hook into the `aws` command-line interface internal event mechanism. Using it you can record a sequence of `aws` commands to a trace-file. The player will allow you to replay that sequence of commands under for example a different configured AWS profile or against a different AWS region. Think of it as a set of poor man's Cloud Formation utilities. It's useful for when you have to re-run a set of commands or quickly test a bunch of things without having to switch back to the console the entire time. And it's also a whole lot quicker than having to write your own `awscli` and `botocore` logic.
 
 Under normal circumstances these utilities would barely be more useful than using a simple shell-script which wraps around `aws` commands. However, the player features some logic that allows it to derive relationships between subsequent calls. This way it can automatically determine that the return value of one command should be supplied to the next request. Think for example of using a command which creates a resource and returns an ARN and the next command then using that specific ARN again. The player has the ability to do a dry run of the sequence of commands in the trace file. It will then colorize the output and highlight the replaced variables to show where the substitutions in a sequence of requests will appear.
 
-![Example Terminal Session](/termsession_example.svg?raw=true&sanitize=true)
 
 # Limitations
 Very complex traces with a set of similar commands might end up yielding unpredictable results. If one for example does an `aws iam create-user` call twice then the second call's parameters will be automatically substituted for the ones of the first one. To inspect what would happen it's advisable to look at the output of a dryrun first. The examples below should make clearer what appropriate use-cases are and how one can use `awstracer`. 
@@ -165,5 +166,6 @@ $ awstrace-play --trace-file create-user.trace --param user-name tu -user3 --par
 ```
 
 
-#
+# Bugs, comments, suggestions
 
+Shoot in a pull-request via github, post an issue in the issue tracker or simply shoot an email to *gvb@anvilventures.com*.
