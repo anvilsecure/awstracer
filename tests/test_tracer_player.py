@@ -70,14 +70,25 @@ class TestPlayer(unittest.TestCase):
 
         t = Trace()
         t.start()
-        t.set_input("bla", [])
-        t.set_output("reqid", "bla", [])
+        t.set_input("bla.wut", [])
+        t.set_output("reqid", "bla.wut", [])
         t.finish()
         inp = io.StringIO()
         inp.write("{}".format(json_dumps([t.to_dict()])))
         inp.seek(0)
         with TracePlayer(inp) as tp:
             self.assertEqual(len(tp.traces), 1)
+
+        inp.seek(0)
+        with TracePlayer(inp, profile="bla-profile", endpoint="bla-endpoint", region="bla-region") as tp:
+            self.assertEqual(len(tp.traces), 1)
+            out = io.StringIO()
+            with redirect_stdout(out):
+                tp.play_trace(Trace(), dryrun=True, sleep_delay=0)
+            val = out.getvalue()
+            self.assertNotEqual(val.find("--profile bla-profile"), -1)
+            self.assertNotEqual(val.find("--endpoint bla-endpoint"), -1)
+            self.assertNotEqual(val.find("--region bla-region"), -1)
 
     def test_player_methods_existence(self):
         try:

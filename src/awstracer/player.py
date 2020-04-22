@@ -48,8 +48,8 @@ class TracePlayer(TraceRunner):
         super().__init__()
         self._fd = input_fd
         self.connections = []
-        self.profile = None
-        self.endpoint = None
+        self.profile = profile
+        self.endpoint = endpoint
         self.region = region
         self.prompt_color = prompt_color
 
