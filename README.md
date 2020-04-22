@@ -2,7 +2,18 @@
 
 ![Example Terminal Session](/termsession_example.svg?raw=true&sanitize=true)
 
-## Example: Creating a DynamoDB table and filling it with data
+## Usage
+
+## Installation
+
+Please note that this tool requires at least Python `>= 3.6`. To install from source simply clone the repository and run:
+
+```
+$ python setup.py sdist
+$ pip install dist/awstracer-1.0.tar.gz
+```
+
+## Example 1: Creating a DynamoDB table and adding data to it
 
 This is the example that can also be seen in the recorded terminal session above. Let's create a tracefile that creates a DynamoDB table named `Music` and inserts a song in the table. The commands are taken directly from the [Amazon DynamoDB Developer Guide](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-1.html). This looks something like this. Please note that the output is truncated.
 
@@ -18,7 +29,7 @@ $ awstrace-rec --trace-file create_table.trace
 >         AttributeName=SongTitle,KeyType=RANGE \
 > --provisioned-throughput \
 >         ReadCapacityUnits=10,WriteCapacityUnits=5
-[..]
+[...]
 Add command to trace cache? [y/N]: y
 (rec) aws dynamodb put-item \
 > --table-name Music  \
@@ -48,7 +59,7 @@ The player has the ability to automatically derive relationships between subsequ
 
 ```
 $ awstrace-play --trace-file create_table.trace --param table-name test-table
-[..]
+[...]
 $ aws dynamodb list-tables
 {
     "TableNames": [
@@ -80,14 +91,60 @@ $ aws dynamodb get-item --consistent-read --table-name bla-table --key '{ "Artis
 }
 ```
 
+## Example 2: Creating AWS users and policies
 
-## Usage
-
-## Installation
-
-Please note that this tool requires at least Python `>= 3.6`.  To install from pip just run `python3 -m pip install awstracer`. To install from source simply clone the repository and run:
+We start a recording session. First we create user `test-user1`. We then create a policy from `file://policy.json` named `test-policy1` and subsequently attach the policy to the user.
 
 ```
-$ python setup.py sdist
-$ pip install dist/awstracer-1.0.tar.gz
+$ awstrace-rec --trace-file create_user.trace
+(rec) aws iam create-user --user-name test-user-1
+[...]
+(rec) aws iam create-policy --policy-name test-policy-1 --policy-document file://policy.json
+{
+    "Policy": {
+    [...]
+        "Arn": "arn:aws:iam::111111111111:policy/policy1",
+    [...]
+    }
+}
+(rec) aws iam attach-user-policy --user-name test-user-1 --policy-arn arn:aws:iam::111111111111:policy/policy1
+[...]
+aws iam list-attached-user-policies --user-name test-user-1
+{
+    "AttachedPolicies": [
+        {
+            "PolicyName": "policy1",
+            "PolicyArn": "arn:aws:iam::111111111111:policy/policy1"
+        }
+    ]
+}
+```
+
+To now create a different user with a different policy all we have to do is edit the `policy.json` file and then rerun the trace.
+We can do a dry-run first by specifying `--dryrun` to see if the appropiate relations between the traces has been properly derived.
+This will look something like this:
+
+```
+$ awstrace-play --trace-file create-user.trace --param user-name tu -user3 --param policy-name tp --param policy-document file://policy.json --dryrun
+(play) aws iam create-user --user-name tu
+(play) aws iam create-policy --policy-document file://policy.json --policy-name tp
+(play) aws iam attach-user-policy --policy-arn arn:aws:iam::111111111111:policy/tp --user-name tu
+(play) aws iam list-attached-user-policies --user-name tu
+```
+
+If we now run it without the `--dryrun` option we will ultimately see the output of the last request which was the call to `list-attached-user-policies`.
+
+```
+$ awstrace-play --trace-file create-user.trace --param user-name tu -user3 --param policy-name tp --param policy-document file://policy.json
+[...]
+(play) aws iam list-attached-user-policies --user-name tu
+{
+    "AttachedPolicies": [
+        {
+            "PolicyName": "tp",
+            "PolicyArn": "arn:aws:iam::111111111111:policy/tp"
+        }
+    ]
+}
+[...]
 ```
