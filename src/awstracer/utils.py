@@ -208,3 +208,15 @@ def setup_logging(logger, debug=True, colorize=True):
     formatter = LogFormatter('%(asctime)s - %(name)s: %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+
+
+def process_file_argument(arg):
+    if not arg.startswith("file://"):
+        return arg
+    arg_fn = arg[len("file://"):]
+    try:
+        with open(arg_fn, "rb") as fd:
+            return fd.read().decode("utf-8")
+    except Exception:
+        return None
+    return None

@@ -1,4 +1,8 @@
+import io
+import tempfile
 import unittest
+import uuid
+from datetime import datetime
 
 
 class TestTracerUtils(unittest.TestCase):
@@ -8,8 +12,6 @@ class TestTracerUtils(unittest.TestCase):
             from awstracer.utils import json_loads, json_load, json_dumps
         except Exception:
             self.fail("json_load(s), json_dump(s) import failed")
-        from datetime import datetime
-        import io
         val = {"_": datetime.now()}
         ret1 = json_dumps(val)
         self.assertNotEqual(ret1.find("_isoformat"), -1)
@@ -36,3 +38,19 @@ class TestTracerUtils(unittest.TestCase):
         self.assertEqual("bla-bla-bla", ret1)
         ret2 = convert_to_camelcase(ret1)
         self.assertEqual(test, ret2)
+
+    def test_process_file_argument(self):
+        try:
+            from awstracer.utils import process_file_argument
+        except Exception:
+            self.fail("process_file_argument failed")
+
+        self.assertEqual(process_file_argument("bla"), "bla")
+        # check non-existing file
+        self.assertIsNone(process_file_argument("file://{}".format(uuid.uuid4().hex)))
+        # test actual reading from file
+        tp = tempfile.NamedTemporaryFile()
+        tp.write(b"hello w0rld")
+        tp.seek(0)
+        arg = process_file_argument("file://{}".format(tp.name))
+        self.assertEqual(arg, "hello w0rld")

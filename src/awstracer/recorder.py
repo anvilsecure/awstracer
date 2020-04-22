@@ -4,7 +4,7 @@ import readline
 import shlex
 
 from .tracer import TraceRunner
-from .utils import json_dumps
+from .utils import json_dumps, process_file_argument
 
 
 class TraceRecorder(TraceRunner):
@@ -33,17 +33,11 @@ class TraceRecorder(TraceRunner):
     def process_file_arguments(self, args):
         ret = []
         for arg in args:
-            if not arg.startswith("file://"):
-                ret.append(arg)
-                continue
-            arg_fn = arg[len("file://"):]
-            try:
-                with open(arg_fn, "rb") as fd:
-                    arg_data = fd.read().decode("utf-8")
-                    ret.append(arg_data)
-            except Exception:
+            arg_ret = process_file_argument(arg)
+            if not arg_ret:
                 print("Couldn't read {}".format(arg))
                 return None
+            ret.append(arg_ret)
         return ret
 
     def run_aws_cmd(self, args):
