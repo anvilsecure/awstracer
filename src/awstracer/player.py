@@ -92,8 +92,10 @@ class TracePlayer(TraceRunner):
         for arg in args:
             output_args[arg] = self._input_args.get(arg, None)
         ret = Trace()
+        ret.start()
         ret.set_input("<api>.<fn_name>", {})
         ret.set_output("special-start-input-trace", "<api>.<fn_name>", output_args)
+        ret.finish()
         return ret
 
     def play_trace(self, dryrun=False, stop_on_error=True, sleep_delay=None):
@@ -125,8 +127,13 @@ class TracePlayer(TraceRunner):
                     self.print_prompt("sleeping for {} second{}".format(isecs, "" if isecs < 2 else "s"))
 
                 # We still sleep as we could be sleeping for .5 seconds as
-                # sleeping for 0 seconds just looks stupid
-                time.sleep(secs)
+                # sleeping for 0 seconds just looks stupid. The seconds could
+                # be negative due to timezone changes or because of the
+                # automatically inserted first trace which will by definition
+                # be created at a later date than the list of traces
+                # themselves.
+                if secs > 0:
+                    time.sleep(secs)
 
             ret = self.play_single_trace(trace, dryrun, i == 0)
             if not ret and stop_on_error:
@@ -335,6 +342,10 @@ def main():
             cname = convert_to_camelcase(name)
             input_args[cname] = val
             logger.debug("Adding {} to input for {} with value {}".format(name, cname, val))
+
+    if not ns.sleep_delay and ns.dryrun:
+        logger.debug("Turning off sleep delay automatically as we are doing a dryrun")
+        ns.sleep_delay = 0
 
     try:
         with open(ns.trace_file, "rb") as fd:
