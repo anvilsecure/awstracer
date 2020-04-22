@@ -7,7 +7,7 @@ import time
 from .tracer import Trace, TraceRunner
 from .utils import convert_to_camelcase, json_load, setup_logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("player")
 
 
 class Edge:
