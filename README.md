@@ -14,6 +14,7 @@ Under normal circumstances these utilities would barely be more useful than usin
 ## Limitations
 Very complex traces with a set of similar commands might end up yielding unpredictable results. If one for example does an `aws iam create-user` call twice then the second call's parameters will be automatically substituted for the ones of the first one. To inspect what would happen it's advisable to look at the output of a dryrun first. The examples below should make clearer what appropriate use-cases are and how one can use `awstracer`. 
 
+
 ## Installation
 
 Please note that this tool requires at least Python `>= 3.6`. To install from source simply clone the repository and run:
@@ -22,6 +23,7 @@ Please note that this tool requires at least Python `>= 3.6`. To install from so
 $ python setup.py sdist
 $ pip install dist/awstracer-1.0.tar.gz
 ```
+
 
 # Usage
 First run `awstrace-rec` to run a recording of aws commands. There is the ability, enabled via a command-line switch, to also support arbitrary shell commands. These will _NOT_ be replayed or even captured in the trace. However this can be useful when you want to make sure a call to AWS IAM for example has settled. You can then execute for example a sleep command before executing the next call to `aws`.
