@@ -184,18 +184,18 @@ class TracePlayer(TraceRunner):
     def find_trace_connections(self, trace_from, trace_to, name, val):
         if name in trace_from.outparams:
             if trace_from.outparams[name] == val:
-                logger.debug("Found connection from {} [] to {} [] with matching parameter name {} and value {}".
+                logger.debug("Found connection from {} [{}] to {} [{}] with matching parameter name {} and value {}".
                              format(trace_from.fn_name, trace_from.request_id, trace_to.fn_name, trace_to.request_id, name, val))
                 c = MatchingNameAndValueEdge(trace_from, trace_to, name)
             else:
-                logger.debug("Found connection from {} [] to {} [] with matching name {} but different values: {} vs {}".
+                logger.debug("Found connection from {} [{}] to {} [{}] with matching name {} but different values: {} vs {}".
                              format(trace_from.fn_name, trace_from.request_id, trace_to.fn_name, trace_to.request_id, name, val, trace_from.outparams[name]))
                 c = MatchingNameEdge(trace_from, trace_to, name, trace_from.outparams[name], val)
             self.connections.append(c)
         else:
             for name2 in trace_from.outparams:
                 if trace_from.outparams[name2] == val:
-                    logger.debug("Found connection from {} [] to {} [] with matching value {} but different parameter names: {} vs {}".
+                    logger.debug("Found connection from {} [{}] to {} [{}] with matching value {} but different parameter names: {} vs {}".
                                  format(trace_from.fn_name, trace_from.request_id, trace_to.fn_name, trace_to.request_id, val, name, name2))
                     c = MatchingValueEdge(trace_from, trace_to, name2, name)
                     self.connections.append(c)
