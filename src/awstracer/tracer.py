@@ -26,6 +26,15 @@ class Trace:
     def finish(self):
         self.ts_end = datetime.datetime.now()
 
+    def get_output_value(self, name):
+        names = name.split(".")
+        d = self.outparams
+        for name in names:
+            if name not in d:
+                return None
+            d = d[name]
+        return d
+
     def set_input(self, fn_name, params):
         self.fn_name = fn_name
         self.inparams = params

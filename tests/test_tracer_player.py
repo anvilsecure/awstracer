@@ -57,15 +57,15 @@ class TestPlayer(unittest.TestCase):
         inp = io.StringIO()
         inp.write("[]")
         inp.seek(0)
-        with TracePlayer(inp) as tp:
-            self.assertEqual(len(tp.traces), 0)
+        with TracePlayer(inp, {}) as tp:
+            self.assertEqual(len(tp.traces), 1)
 
         # check missing arguments
         inp = io.StringIO()
         inp.write("[{}]")
         inp.seek(0)
         with self.assertRaises(ValueError):
-            with TracePlayer(inp):
+            with TracePlayer(inp, {}):
                 pass
 
         t = Trace()
@@ -77,14 +77,14 @@ class TestPlayer(unittest.TestCase):
         inp.write("{}".format(json_dumps([t.to_dict()])))
         inp.seek(0)
         with TracePlayer(inp) as tp:
-            self.assertEqual(len(tp.traces), 1)
+            self.assertEqual(len(tp.traces), 2)
 
         inp.seek(0)
         with TracePlayer(inp, profile="bla-profile", endpoint="bla-endpoint", region="bla-region") as tp:
-            self.assertEqual(len(tp.traces), 1)
+            self.assertEqual(len(tp.traces), 2)
             out = io.StringIO()
             with redirect_stdout(out):
-                tp.play_trace(Trace(), dryrun=True, sleep_delay=0)
+                tp.play_trace(dryrun=True, sleep_delay=0)
             val = out.getvalue()
             self.assertNotEqual(val.find("--profile bla-profile"), -1)
             self.assertNotEqual(val.find("--endpoint bla-endpoint"), -1)
@@ -95,7 +95,7 @@ class TestPlayer(unittest.TestCase):
             from awstracer.player import TracePlayer
         except Exception:
             self.fail("cannot import TracePlayer")
-        methods = ["play_trace", "play_single_trace", "get_shell_poc", "find_trace_connections", "find_connections", "prune_connections"]
+        methods = ["play_trace", "play_single_trace", "get_shell_poc", "find_connections_between_traces", "find_connections", "prune_connections"]
         for m in methods:
             self.assertIn(m, dir(TracePlayer))
 
@@ -118,7 +118,6 @@ class TestPlayer(unittest.TestCase):
 
         f = io.StringIO()
         with redirect_stdout(f):
-            st = Trace()
             t = Trace()
             t.start()
             t.set_input("bla.wut", {"arg1": "val'\"`ue1"})
@@ -127,8 +126,8 @@ class TestPlayer(unittest.TestCase):
             inp = io.StringIO()
             inp.write("{}".format(json_dumps([t.to_dict()])))
             inp.seek(0)
-            with TracePlayer(inp, prompt_color=False) as tp:
-                tp.play_trace(st, dryrun=True, stop_on_error=True, sleep_delay=0)
+            with TracePlayer(inp, {}, prompt_color=False) as tp:
+                tp.play_trace(dryrun=True, stop_on_error=True, sleep_delay=0)
         self.assertNotEqual(f.getvalue().find("(play) aws bla wut"), -1)
         self.assertNotEqual(f.getvalue().find("--arg1 'val'\"'\"'\"`ue1'"), -1)
 
@@ -143,7 +142,6 @@ class TestPlayer(unittest.TestCase):
 
         f = io.StringIO()
         with redirect_stdout(f):
-            st = Trace()
             t = Trace()
             t.start()
             t.set_input("bla.wut", {"arg1": "val'\"`ue1"})
@@ -168,8 +166,8 @@ class TestPlayer(unittest.TestCase):
             inp = io.StringIO()
             inp.write("{}".format(json_dumps([x.to_dict() for x in tt])))
             inp.seek(0)
-            with TracePlayer(inp, prompt_color=False) as tp:
-                tp.find_connections(st)
+            with TracePlayer(inp, {}, prompt_color=False) as tp:
+                tp.find_connections()
                 self.assertEqual(len(tp.connections), 3)
 
                 # test the first connection matching name+value
@@ -214,7 +212,7 @@ class TestPlayer(unittest.TestCase):
                 t5.finish()
                 tp.traces.append(t5)
 
-                tp.find_connections(st)
+                tp.find_connections()
                 self.assertEqual(len(tp.connections), 5)
                 c = tp.connections[-1]
                 self.assertEqual(c.trace_from.fn_name, "bla.wut3")

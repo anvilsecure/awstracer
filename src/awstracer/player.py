@@ -5,7 +5,7 @@ import sys
 import time
 
 from .tracer import Trace, TraceRunner
-from .utils import convert_to_camelcase, json_load, setup_logging
+from .utils import convert_to_camelcase, json_load, setup_logging, process_file_argument
 
 logger = logging.getLogger("player")
 
@@ -29,24 +29,31 @@ class Edge:
 
 
 class MatchingNameAndValueEdge(Edge):
-    def __init__(self, trace_from, trace_to, varname_from):
-        super().__init__(trace_from, trace_to, varname_from, varname_from)
+    def __init__(self, trace_from, trace_to, varname, value):
+        super().__init__(trace_from, trace_to, varname, varname)
+        logger.debug("Connection from {} [{}] to {} [{}] with match for name {} and value {}".
+                     format(trace_from.fn_name, trace_from.request_id, trace_to.fn_name, trace_to.request_id, varname, value))
 
 
 class MatchingNameEdge(Edge):
-    def __init__(self, trace_from, trace_to, varname_from, value_from, value_to):
-        super().__init__(trace_from, trace_to, varname_from, varname_from)
+    def __init__(self, trace_from, trace_to, varname, value_from, value_to):
+        super().__init__(trace_from, trace_to, varname, varname)
+        logger.debug("Connection from {} [{}] to {} [{}] with match for name {} but different values: {} -> {})".
+                     format(trace_from.fn_name, trace_from.request_id, trace_to.fn_name, trace_to.request_id, varname, value_from, value_to))
 
 
 class MatchingValueEdge(Edge):
-    def __init__(self, trace_from, trace_to, varname_from, varname_to):
+    def __init__(self, trace_from, trace_to, value, varname_from, varname_to):
         super().__init__(trace_from, trace_to, varname_from, varname_to)
+        logger.debug("Connection from {} [{}] to {} [{}] with match values {} but different names: {} -> {})".
+                     format(trace_from.fn_name, trace_from.request_id, trace_to.fn_name, trace_to.request_id, value, varname_from, varname_to))
 
 
 class TracePlayer(TraceRunner):
-    def __init__(self, input_fd, profile=None, endpoint=None, region=None, prompt_color=True):
+    def __init__(self, input_fd, input_args={}, profile=None, endpoint=None, region=None, prompt_color=True):
         super().__init__()
         self._fd = input_fd
+        self._input_args = input_args
         self.connections = []
         self.profile = profile
         self.endpoint = endpoint
@@ -54,7 +61,10 @@ class TracePlayer(TraceRunner):
         self.prompt_color = prompt_color
 
     def __enter__(self):
-        self.traces = [Trace.from_dict(t) for t in json_load(self._fd)]
+        traces = [Trace.from_dict(t) for t in json_load(self._fd)]
+        input_trace = self._get_input_trace(traces)
+        traces.insert(0, input_trace)
+        self.traces = traces
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -65,11 +75,33 @@ class TracePlayer(TraceRunner):
         data = "\x1b[33m{}\x1b[0m".format(data) if self.prompt_color else data
         print(prompt.format(data))
 
-    def play_trace(self, input_trace, dryrun=False, stop_on_error=True, sleep_delay=None):
+    def _get_input_trace(self, traces):
+        # add all the toplevel-only unique input parameters
+        args = set()
+        for trace in traces:
+            for name in trace.inparams:
+                args.add(name)
+
+        # check if there are no erroneous input arguments specified, we will continue
+        # anyway but we at least give the user the option to detect this
+        for iarg in self._input_args:
+            if iarg not in args:
+                logger.warning("Invalid argument {}: not found in the inputs for any of the traces".format(iarg))
+
+        output_args = {}
+        for arg in args:
+            output_args[arg] = self._input_args.get(arg, None)
+        ret = Trace()
+        ret.set_input("<api>.<fn_name>", {})
+        ret.set_output("special-start-input-trace", "<api>.<fn_name>", output_args)
+        return ret
+
+    def play_trace(self, dryrun=False, stop_on_error=True, sleep_delay=None):
         logger.debug("Playing trace: dryrun={}, stop_on_error={}, sleep_delay={}".format(dryrun, stop_on_error, sleep_delay))
 
+        t0 = self.traces[0]
         self._play_results = {}
-        self._play_results[input_trace.request_id] = input_trace
+        self._play_results[t0.request_id] = t0
 
         logger.debug("Running {} single traces".format(len(self.traces)))
         for i, trace in enumerate(self.traces):
@@ -96,11 +128,11 @@ class TracePlayer(TraceRunner):
                 # sleeping for 0 seconds just looks stupid
                 time.sleep(secs)
 
-            ret = self.play_single_trace(trace, dryrun)
+            ret = self.play_single_trace(trace, dryrun, i == 0)
             if not ret and stop_on_error:
                 break
 
-    def play_single_trace(self, trace, dryrun=False):
+    def play_single_trace(self, trace, dryrun=False, is_first=False):
         # find connections into this trace and replace the variables with
         # the cached results variables
         replace_vars = {}
@@ -117,18 +149,26 @@ class TracePlayer(TraceRunner):
                     missing += 1
                     continue
 
+                # check if we can fetch results from the previous call
                 rtrace = self._play_results[from_rid]
-                name = edge.varname_from
-                if name not in rtrace.outparams:
-                    logger.warning("Couldn't find {} in previous request results.".format(name))
-                    logger.warning("The {} call probably failed.".format(rtrace.fn_name))
+                if not rtrace:
+                    logger.warning("The {} call probably failed.".format(edge.trace_from.fn_name))
                     missing += 1
                     continue
 
-                val = rtrace.outparams[name]
-                logger.debug("Replacing {} value with {} (was: {})".format(name, shlex.quote(val), shlex.quote(edge.trace_to.inparams[name])))
-                replace_vars[name] = val
-                replaced += 1
+                # check if we found a value for the connection
+                from_name = edge.varname_from
+                to_name = edge.varname_to
+                old_val = edge.trace_to.inparams[to_name]
+                val = rtrace.get_output_value(from_name)
+                if val:
+                    logger.debug("Replacing {} value with {} (was: {})".format(to_name, shlex.quote(val), shlex.quote(old_val)))
+                    replace_vars[to_name] = val
+                    replaced += 1
+                    continue
+
+                logger.warning("Couldn't replace {} as we didn't find {} (was: {})".format(to_name, from_name, shlex.quote(old_val)))
+                missing += 1
 
         logger.debug("Replacing {} out of {} parameters ({} failed to replace)".
                      format(replaced, missing + replaced, missing))
@@ -158,9 +198,11 @@ class TracePlayer(TraceRunner):
                 outpoc = outpoc.replace("{} {}".format(optname, optval),
                                         "\x1b[31m{} {}\x1b[0m".format(optname, optval))
 
-        self.print_prompt(outpoc)
+        if not is_first:
+            self.print_prompt(outpoc)
 
-        if dryrun:
+        if dryrun or is_first:
+            self._play_results[trace.request_id] = trace
             return trace
 
         # shell split the arguments and remove the call to aws itself
@@ -169,7 +211,16 @@ class TracePlayer(TraceRunner):
             raise ValueError("sanity check failed")
         del args[0]
 
-        out_trace = self.run_aws_cmd(args)
+        # process any file arguments if needed
+        new_args = []
+        for arg in args:
+            arg_ret = process_file_argument(arg)
+            if not arg_ret:
+                logger.error("Couldn't read {}".format(arg))
+                return None
+            new_args.append(arg_ret)
+
+        out_trace = self.run_aws_cmd(new_args)
         self._play_results[trace.request_id] = out_trace
         logger.debug("Ran trace and added results to the results cache")
         return out_trace
@@ -181,41 +232,54 @@ class TracePlayer(TraceRunner):
             pocs.append(poc)
         return "\n".join(pocs)
 
-    def find_trace_connections(self, trace_from, trace_to, name, val):
-        if name in trace_from.outparams:
-            if trace_from.outparams[name] == val:
-                logger.debug("Found connection from {} [{}] to {} [{}] with matching parameter name {} and value {}".
-                             format(trace_from.fn_name, trace_from.request_id, trace_to.fn_name, trace_to.request_id, name, val))
-                c = MatchingNameAndValueEdge(trace_from, trace_to, name)
-            else:
-                logger.debug("Found connection from {} [{}] to {} [{}] with matching name {} but different values: {} vs {}".
-                             format(trace_from.fn_name, trace_from.request_id, trace_to.fn_name, trace_to.request_id, name, val, trace_from.outparams[name]))
-                c = MatchingNameEdge(trace_from, trace_to, name, trace_from.outparams[name], val)
-            self.connections.append(c)
-        else:
-            for name2 in trace_from.outparams:
-                if trace_from.outparams[name2] == val:
-                    logger.debug("Found connection from {} [{}] to {} [{}] with matching value {} but different parameter names: {} vs {}".
-                                 format(trace_from.fn_name, trace_from.request_id, trace_to.fn_name, trace_to.request_id, val, name, name2))
-                    c = MatchingValueEdge(trace_from, trace_to, name2, name)
-                    self.connections.append(c)
-
-    def find_connections(self, input_trace):
-        self.connections = []
-        for i, trace in enumerate(self.traces):
-
-            for name in input_trace.outparams:
-                val = input_trace.outparams[name]
-                self.find_trace_connections(input_trace, trace, name, val)
-            if i == 0:
+    def find_connections_between_traces(self, trace_from, trace_to):
+        logger.debug("Finding connections from {} to {}".format(trace_from.fn_name, trace_to.fn_name))
+        for name_out in trace_from.outparams:
+            val_from = trace_from.outparams[name_out]
+            if not val_from:
                 continue
 
-            for name in trace.inparams:
-                val = trace.inparams[name]
-                for j, older_trace in enumerate(self.traces):
-                    if j == i:
-                        break
-                    self.find_trace_connections(older_trace, trace, name, val)
+            if type(val_from) == dict:
+                # check nested structure XXX for now we only check one level deep
+                for kname in val_from:
+                    nested_name = "{}.{}".format(name_out, kname)
+                    kval = val_from[kname]
+                    for k in trace_to.inparams:
+                        inval = trace_to.inparams[k]
+                        if inval == kval:
+                            c = MatchingValueEdge(trace_from, trace_to, kval, nested_name, k)
+                            self.connections.append(c)
+
+            # check if we can find a matching parameter name between the output
+            # of the trace we're coming from and the input parameters of the
+            # trace we're comparing with
+            if name_out in trace_to.inparams:
+                val_to = trace_to.inparams[name_out]
+                if val_from == val_to:
+                    c = MatchingNameAndValueEdge(trace_from, trace_to, name_out, val_to)
+                else:
+                    c = MatchingNameEdge(trace_from, trace_to, name_out, val_from, val_to)
+                self.connections.append(c)
+                continue
+
+            # check if we can find a matching input value even though the
+            # parameter names are different compared with the output value of
+            # the trace we're coming from
+            for name_in in trace_to.inparams:
+                val_to = trace_to.inparams[name_in]
+                if val_from == val_to:
+                    c = MatchingValueEdge(trace_from, trace_to, val_to, name_out, name_in)
+                    self.connections.append(c)
+                # we keep going as we technically could have multiple
+                # parameters which are set to the same value
+
+    def find_connections(self):
+        self.connections = []
+        for i, trace in enumerate(self.traces):
+            for j, older_trace in enumerate(self.traces):
+                if j == i:
+                    break
+                self.find_connections_between_traces(older_trace, trace)
 
     def prune_connections(self):
         # Assumption is that connections are sorted in the order of the loaded
@@ -264,28 +328,28 @@ def main():
     ns = opt_parser()
     setup_logging(logger, debug=ns.debug, colorize=ns.colorize)
 
-    # add the overridden parameters to the input trace
+    # add the overridden parameters to the input
     input_args = {}
     if ns.params:
         for name, val in ns.params:
             cname = convert_to_camelcase(name)
             input_args[cname] = val
             logger.debug("Adding {} to input for {} with value {}".format(name, cname, val))
-    input_trace = Trace()
-    input_trace.set_output("special-start-input-trace", "<not set>", input_args)
 
     try:
         with open(ns.trace_file, "rb") as fd:
             with TracePlayer(
                     input_fd=fd,
+                    input_args=input_args,
                     prompt_color=ns.colorize,
                     profile=ns.profile,
                     endpoint=ns.endpoint,
                     region=ns.region) as player:
-                player.find_connections(input_trace)
+
+                player.find_connections()
                 player.prune_connections()
 
-                player.play_trace(input_trace, dryrun=ns.dryrun, stop_on_error=ns.stop_on_error, sleep_delay=ns.sleep_delay)
+                player.play_trace(dryrun=ns.dryrun, stop_on_error=ns.stop_on_error, sleep_delay=ns.sleep_delay)
     except OSError:
         logger.error("Failed to open {}".format(ns.trace_file))
         sys.exit(1)
