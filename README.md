@@ -32,7 +32,7 @@ After the trace has been recorded you can replay it with `awstrace-play`. There 
 
 Please note that both `awstrace-play` and `awstrace-rec` are very light wrappers around the standard aws cli. This means that it will automatically import your profiles from `~/.aws/credentials` or load IAM access keys from the environment. From that perspective everything works exactly like usual.
 
-Overriding request parameters can be done via `-p` or `--param`. Request parameters tend to be similarly cased to how the `aws cli` styles them. That means that even if the request and response use for example `UserName` you specify it on the commandline with `user-name`. For `awstrace-play` that means you would use something like `-p user-name test-user` to override the value in the trace.
+Overriding request parameters can be done via `-p` or `--param`. Request parameters tend to be similarly cased to how the `aws cli` styles them. That means that even if the request and response use for example `UserName` you specify it on the commandline with `--user-name`. For `awstrace-play` that means you would use something like `-p user-name test-user` to override the value in the trace.
 
 
 ## Usage Example 1: Creating a DynamoDB table and adding data to it
