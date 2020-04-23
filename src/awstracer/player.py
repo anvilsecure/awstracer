@@ -314,7 +314,7 @@ def opt_parser(args=None):
     parser = argparse.ArgumentParser(description="AWS CLI Trace Player")
     parser.add_argument("--dryrun", action="store_true", dest="dryrun", help="Show trace and computed parameter substituations without actually executing them")
     parser.add_argument("--endpoint", metavar="URL", type=str, help="AWS endpoint url to use", dest="endpoint")
-    parser.add_argument("--param", nargs=2, metavar=("NAME", "VALUE"), type=str, help="Override parameter NAME with VALUE", action="append", dest="params")
+    parser.add_argument("-p", "--param", nargs=2, metavar=("NAME", "VALUE"), type=str, help="Override parameter NAME with VALUE", action="append", dest="params")
     parser.add_argument("--profile", metavar="PROFILE", type=str, help="AWS profile to run trace under", dest="profile")
     parser.add_argument("--region", metavar="REGION", type=str, help="AWS region to run trace in", dest="region")
     parser.add_argument("-s", type=int, metavar="N", dest="sleep_delay", default=None, help="Force N seconds of sleep delay between commands")

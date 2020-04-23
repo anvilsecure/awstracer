@@ -21,7 +21,7 @@ Please note that this tool requires at least Python `>= 3.6`. To install from so
 
 ```
 $ python setup.py sdist
-$ pip install dist/awstracer-1.0.tar.gz
+$ pip install dist/awstracer-<version>.tar.gz
 ```
 
 
@@ -31,6 +31,8 @@ First run `awstrace-rec` to run a recording of aws commands. There is the abilit
 After the trace has been recorded you can replay it with `awstrace-play`. There are several switches to enable debugging, force a continuation of a trace execution when one intermediate command fails and so on. For more information simply run `awstrace-play -h`. To replay a trace against a different region or profile simply use the `--profile` or `--region` switches.
 
 Please note that both `awstrace-play` and `awstrace-rec` are very light wrappers around the standard aws cli. This means that it will automatically import your profiles from `~/.aws/credentials` or load IAM access keys from the environment. From that perspective everything works exactly like usual.
+
+Overriding request parameters can be done via `-p` or `--param`. Request parameters tend to be similarly cased to how the `aws cli` styles them. That means that even if the request and response use for example `UserName` you specify it on the commandline with `user-name`. For `awstrace-play` that means you would use something like `-p user-name test-user` to override the value in the trace.
 
 
 ## Usage Example 1: Creating a DynamoDB table and adding data to it
@@ -78,7 +80,7 @@ $ awstrace-play --trace-file create_table.trace --profile admin-profile --endpoi
 The player has the ability to automatically derive relationships between subsequent commands. This means that we have the ability to override a parameter inside a trace file without having to edit the trace file or edit any of the commands themselves. For example if we want to create a table with a different name but still want to get the data inserted to that new table we simply do this:
 
 ```
-$ awstrace-play --trace-file create_table.trace --param table-name test-table
+$ awstrace-play --trace-file create_table.trace -p table-name test-table
 [...]
 $ aws dynamodb list-tables
 {
@@ -145,7 +147,7 @@ We can do a dry-run first by specifying `--dryrun` to see if the appropiate rela
 This will look something like this:
 
 ```
-$ awstrace-play --trace-file create-user.trace --param user-name tu -user3 --param policy-name tp --param policy-document file://policy.json --dryrun
+$ awstrace-play --trace-file create-user.trace -p user-name tu -p policy-name tp policy-document file://policy.json --dryrun
 (play) aws iam create-user --user-name tu
 (play) aws iam create-policy --policy-document file://policy.json --policy-name tp
 (play) aws iam attach-user-policy --policy-arn arn:aws:iam::111111111111:policy/tp --user-name tu
@@ -155,7 +157,7 @@ $ awstrace-play --trace-file create-user.trace --param user-name tu -user3 --par
 If we now run it without the `--dryrun` option we will ultimately see the output of the last request which was the call to `list-attached-user-policies`.
 
 ```
-$ awstrace-play --trace-file create-user.trace --param user-name tu -user3 --param policy-name tp --param policy-document file://policy.json
+$ awstrace-play --trace-file create-user.trace -p user-name tu -p policy-name tp -p policy-document file://policy.json
 [...]
 (play) aws iam list-attached-user-policies --user-name tu
 {

@@ -43,6 +43,13 @@ class TestPlayer(unittest.TestCase):
         self.assertEqual(ns.params[0][1], "val1")
         self.assertEqual(ns.params[1][0], "p2")
         self.assertEqual(ns.params[1][1], "val2")
+        ns = opt_parser(["--trace-file", "bla", "-p", "p1", "val1", "-p", "p2", "val2"])
+        self.assertIsInstance(ns.params, list)
+        self.assertEqual(len(ns.params), 2)
+        self.assertEqual(ns.params[0][0], "p1")
+        self.assertEqual(ns.params[0][1], "val1")
+        self.assertEqual(ns.params[1][0], "p2")
+        self.assertEqual(ns.params[1][1], "val2")
 
     def test_player_class(self):
         try:
