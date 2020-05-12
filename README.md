@@ -20,8 +20,8 @@ Very complex traces with a set of similar commands might end up yielding unpredi
 Please note that this tool requires at least Python `>= 3.6`. To install from source simply clone the repository and run:
 
 ```
-$ python setup.py sdist
-$ pip install dist/awstracer-<version>.tar.gz
+$ python3 setup.py sdist
+$ pip3 install dist/awstracer-<version>.tar.gz
 ```
 
 
@@ -94,7 +94,7 @@ $ aws dynamodb list-tables
 We can see that `test-table` was created. To check if the data actually got inserted we can use the following to see if we can get an item returned from the table. If that works it means the player did its job correctly and it replayed the trace with the overridden parameters properly.
 
 ```
-$ aws dynamodb get-item --consistent-read --table-name bla-table --key '{ "Artist": {"S": "No One You Know"}, "SongTitle": {"S": "Call Me Today"}}
+$ aws dynamodb get-item --consistent-read --table-name test-table --key '{ "Artist": {"S": "No One You Know"}, "SongTitle": {"S": "Call Me Today"}}
 {
     "Item": {
         "AlbumTitle": {
