@@ -48,7 +48,7 @@ setuptools.setup(
         "Environment :: Console",
         "Intended Audience :: Developers",
         "Intended Audience :: Information Technology",
-        "Intended Audience :: Systems Administrators",
+        "Intended Audience :: System Administrators",
     ],
     python_requires='>=3.6',
     entry_points={
