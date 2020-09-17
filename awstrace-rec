@@ -1,2 +1,2 @@
 #!/bin/sh
-PYTHONPATH=src python3.6 -m awstracer.recorder "$@"
+PYTHONPATH=src python3 -m awstracer.recorder "$@"

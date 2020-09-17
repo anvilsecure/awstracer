@@ -1,2 +1,2 @@
 #!/bin/sh
-PYTHONPATH=src python3.6 -m awstracer.player "$@"
+PYTHONPATH=src python3 -m awstracer.player "$@"
