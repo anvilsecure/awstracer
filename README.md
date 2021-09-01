@@ -174,4 +174,4 @@ $ awstrace-play --trace-file create-user.trace -p user-name tu -p policy-name tp
 
 # Bugs, comments, suggestions
 
-Shoot in a pull-request via github, post an issue in the issue tracker or simply shoot an email to *gvb@anvilventures.com*.
+Shoot in a pull-request via github, post an issue in the issue tracker or simply shoot an email to *gvb@anvilsecure.com*.
